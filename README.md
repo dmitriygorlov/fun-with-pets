@@ -3,4 +3,5 @@
 
 Let's make some pet projects to be proud of.
 
-1. Telegram Bot. Is it simple (use translation lib)
+1. [Is it simple](~Is-it-simple_bot) (Telegram bot that use translation lib for double translation)
+2. 
