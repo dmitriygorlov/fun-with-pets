@@ -1,0 +1,15 @@
+version: '3'
+services:
+  app:
+    build: .
+    volumes:
+      - './files:/app/files'
+      - './results:/app/results'
+      - './logs:/app/logs'
+      - './mappings_embeddings:/app/mappings_embeddings'
+    environment:
+      - DATA_PATH=files/client_item.csv
+      - CLIENTS_PATH=files/clients.csv
+      - ITEMS_PATH=files/items.csv
+      - EXCLUDE_PATH=files/exclude.csv
+      - RESULT_PATH=results/predict_clients_items_rank.csv
