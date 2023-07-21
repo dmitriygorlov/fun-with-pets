@@ -20,31 +20,40 @@ bot = Bot(token=str(bot_token))
 dp = Dispatcher(bot)
 
 # Load authorized users from CSV file
-allowed_users = pd.DataFrame(columns=["user_id", "datetime_added"])
-allowed_users.set_index("user_id", inplace=True)
 allowed_users_file = "allowed_users.csv"
-stats_file = "stats.csv"
-batch_size = 2
-
 if os.path.exists(allowed_users_file):
     allowed_users = pd.read_csv(allowed_users_file)
     allowed_users.set_index("user_id", inplace=True)
+else:
+    allowed_users = pd.DataFrame(columns=["user_id", "datetime_added"])
+    allowed_users.set_index("user_id", inplace=True)
+
 
 # Initialize stats DataFrame
-stats = pd.DataFrame(
-    columns=[
-        "user_id",
-        "message_count",
-        "last_message_datetime",
-        "prompt_tokens_amount",
-        "completion_tokens_amount",
-    ]
-)
-stats.set_index("user_id", inplace=True)
+stats_file = "stats.csv"
 if os.path.exists(stats_file):
     stats = pd.read_csv(stats_file)
     stats.set_index("user_id", inplace=True)
+else:
+    stats = pd.DataFrame(
+        columns=[
+            "user_id",
+            "message_count",
+            "last_message_datetime",
+            "prompt_tokens_amount",
+            "completion_tokens_amount",
+        ]
+    )
+    stats.set_index("user_id", inplace=True)
+
+# Some batch settings
+batch_size = 2
 batch_updates = []
+
+# Pass settings to the bot
+bot_password = os.getenv("BOT_PASSWORD")
+first_symbol = os.getenv("FIRST_SYMBOL")
+
 
 # Load openai settings
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -53,7 +62,10 @@ pre = "You are a helpful chatbot that helps people with their problems. Make sho
 
 
 # On message event handler for authorized users
-@dp.message_handler(lambda message: str(message.from_user.id) in allowed_users.index)
+@dp.message_handler(
+    lambda message: str(message.from_user.id) in allowed_users.index
+    and message.text.startswith(first_symbol)
+)
 async def handle_message(message: types.Message):
     global batch_updates
     user_id = str(message.from_user.id)
@@ -93,35 +105,32 @@ async def handle_message(message: types.Message):
     logger.info(f"User {user_id} asked: {message.text}")
 
 
-# On message event handler for non-authorized users
-@dp.message_handler(commands=["add_user"])
-async def handle_add_user(message: types.Message):
-    user_id = str(message.from_user.id)
-    # Prompt the user for the password
-    await message.answer("Please enter the password:")
-    logger.info(f"Prompted user {user_id} to enter the password")
-
-
 @dp.message_handler()
 async def handle_password(message: types.Message):
     global allowed_users, stats  # Add stats here to refer to the global variable
     user_id = str(message.from_user.id)
     password = message.text
 
-    if password == os.getenv("BOT_PASSWORD"):
-        # Add user to allowed users
-        allowed_users.loc[str(user_id)] = [datetime.now().isoformat()]
-        allowed_users.to_csv(allowed_users_file)
-
-        # Add new user to stats
-        stats.loc[str(user_id)] = [0, None, 0, 0]
-        stats.to_csv(stats_file)
-
-        await message.answer("Access granted. You can now use the bot.")
-        logger.info(f"User {user_id} was granted access with password: {password}")
+    # Check if the user is already authorized
+    if user_id in allowed_users.index:
+        await message.answer(
+            "You are already authorized. Please use any of right first symbols."
+        )
     else:
-        await message.answer("Invalid password. Access denied.")
-        logger.info(f"User {user_id} entered an invalid password: {password}")
+        if password == bot_password:
+            # Add user to allowed users
+            allowed_users.loc[str(user_id)] = [datetime.now().isoformat()]
+            allowed_users.to_csv(allowed_users_file)
+
+            # Add new user to stats
+            stats.loc[str(user_id)] = [0, None, 0, 0]
+            stats.to_csv(stats_file)
+
+            await message.answer("Access granted. You can now use the bot.")
+            logger.info(f"User {user_id} was granted access with password: {password}")
+        else:
+            await message.answer("Invalid password. Access denied.")
+            logger.info(f"User {user_id} entered an invalid password: {password}")
 
 
 def update_stats():
