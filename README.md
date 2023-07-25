@@ -1,4 +1,4 @@
-# Fun With Pets 🐈‍⬛🐕::
+# Fun With Pets 🐈‍⬛🐕
 
 Welcome to `Fun With Pets` - a collection of pet projects that showcases the power of technology to innovate and solve real-world challenges. Just like a zoo that houses many diverse creatures, this repository holds a variety of exciting projects that cater to different interests.
 
