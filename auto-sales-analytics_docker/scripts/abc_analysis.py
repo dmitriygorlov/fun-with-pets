@@ -49,6 +49,6 @@ def perform_abc(
         inplace=True,
     )
 
-    result = {"ABC stats": abc_result, "XYZ classification": product_sales}
+    result = {"ABC stats": abc_result, "ABC classification": product_sales}
 
     return result
