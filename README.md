@@ -12,4 +12,7 @@ Here's a brief overview of what you'll find:
 
 4. [Auto Sales Analysis](https://github.com/dmitriygorlov/fun-with-pets/tree/main/auto-sales-analytics_docker): A practical and stylish way to analyze your sales data. It uses `docker-compose` to ensure a smooth setup and execution process, enabling quick generation of ABC, XYZ, and other analytics for your sales data.
 
+5. [Airflow Jokes Pipeline](https://github.com/dmitriygorlov/fun-with-pets/tree/main/jokes-aside_airflow): Automating the retrieval, storage, and distribution of jokes using Apache Airflow with Docker. This project fetches a random joke, stores it in a PostgreSQL database, and shares it via email — all through a single command.
+
+
 The goal of this collection is not only to provide useful solutions and insights but also to inspire and motivate you to create your own projects. Enjoy exploring!
