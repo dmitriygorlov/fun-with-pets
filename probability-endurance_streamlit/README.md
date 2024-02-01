@@ -16,9 +16,9 @@ This project utilizes Python, Streamlit, and Plotly to create an engaging web ap
 
 ## How to Make It Work
 
-### Via Streamlit live demo
+### Via Streamlit web page
 **No installation required.**
-Just visit the [live demo]() to access the Streamlit app.
+- Just go to [this link](https://probability-endurance.streamlit.app/) to access the app.
 
 ### Locally with Docker
 **Docker ensures it works seamlessly across different environments.**
