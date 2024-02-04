@@ -1,0 +1,7 @@
+version: '3'
+services:
+  forecast-prophet:
+    build: .
+    volumes:
+      - ./data:/data
+      - ./results:/results

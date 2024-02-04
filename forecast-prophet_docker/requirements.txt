@@ -1,0 +1,4 @@
+pandas
+prophet
+plotly>=5.0.0
+kaleido
