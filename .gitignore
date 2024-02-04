@@ -152,4 +152,5 @@ cython_debug/
 #.idea/
 .vscode/launch.json
 
-/notebook
+# some pre ready notebook
+/ynotebook
