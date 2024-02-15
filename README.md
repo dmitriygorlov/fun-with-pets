@@ -14,5 +14,9 @@ Here's a brief overview of what you'll find:
 
 5. [Airflow Jokes Pipeline](https://github.com/dmitriygorlov/fun-with-pets/tree/main/jokes-aside_airflow): Automating the retrieval, storage, and distribution of jokes using [`Apache Airflow`](https://airflow.apache.org/) with `Docker`. This project fetches a random joke, stores it in a `PostgreSQL` database, and shares it via email — all through a single command.
 
+6. [Success Probability Visualizer](https://github.com/dmitriygorlov/fun-with-pets/tree/main/probability-endurance_streamlit): An interactive web application that demystifies the concept of cumulative success probability through visual and numerical storytelling. Built with `Streamlit` and `Plotly`, this project employs `Docker` for hassle-free deployment, making it accessible to anyone curious about the statistical chances of success over repeated attempts. It's designed to inspire persistence and illustrate the mathematical principle that "the more you try, the luckier you get."
+
+7. [Sales Forecasting with Prophet](https://github.com/dmitriygorlov/fun-with-pets/tree/main/forecast-prophet_docker): Streamlining e-commerce sales forecasting with the power of Facebook's [`Prophet`](https://github.com/facebook/prophet/) within a `Docker`ized environment. This project automates the process of forecasting future sales by analyzing time series data, providing both summary and detailed forecasts alongside insightful visualizations. It's designed for simplicity, requiring minimal setup, and caters to users seeking actionable insights into sales trends without deep diving into complex statistical models.
+
 
 The goal of this collection is not only to provide useful solutions and insights but also to inspire and motivate you to create your own projects. Enjoy exploring!
