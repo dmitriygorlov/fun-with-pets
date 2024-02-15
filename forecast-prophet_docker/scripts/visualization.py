@@ -1,36 +1,19 @@
-import plotly.graph_objs as go
-import pandas as pd
+from prophet.plot import plot_plotly, plot_components_plotly
 
 
-def save_visualization(forecast, file_path):
-    """Generate and save a visualization of the forecast using Plotly."""
-    trace1 = go.Scatter(
-        x=forecast["ds"], y=forecast["yhat"], mode="lines", name="Прогноз"
+def save_visualizations(model, forecast):
+    """
+    Generate and save visualizations of the forecast and its components using Plotly, with custom axis labels.
+    """
+
+    fig1 = plot_plotly(model, forecast)
+    fig1.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Sales",
+        yaxis=dict(range=[0, forecast["yhat"].max()]),
+        title="Sales Forecast",
     )
+    fig1.write_image("/results/forecast.png")
 
-    trace2 = go.Scatter(
-        x=forecast["ds"],
-        y=forecast["yhat_upper"],
-        fill=None,
-        mode="lines",
-        line=dict(color="gray"),
-        showlegend=False,
-    )
-
-    trace3 = go.Scatter(
-        x=forecast["ds"],
-        y=forecast["yhat_lower"],
-        fill="tonexty",
-        mode="lines",
-        line=dict(color="gray"),
-        showlegend=False,
-    )
-
-    data = [trace1, trace2, trace3]
-
-    layout = go.Layout(
-        title="Прогноз продаж", xaxis=dict(title="Дата"), yaxis=dict(title="Продажи")
-    )
-
-    fig = go.Figure(data=data, layout=layout)
-    fig.write_image(file_path)  # save the plot to a file
+    fig2 = plot_components_plotly(model, forecast)
+    fig2.write_image("/results/forecast_components.png")

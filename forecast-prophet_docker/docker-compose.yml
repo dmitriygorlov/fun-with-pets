@@ -5,3 +5,5 @@ services:
     volumes:
       - ./data:/data
       - ./results:/results
+    env_file:
+      - .env
