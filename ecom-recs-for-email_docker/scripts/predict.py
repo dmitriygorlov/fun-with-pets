@@ -94,9 +94,8 @@ def generate_item_recommendations_for_clients(
     )
 
     # loop through chunks of clients
-    for i, target_clients_chunk in enumerate(
-        np.array_split(clients_for_predicts, chunk_count)
-    ):
+    for i, start in enumerate(range(0, len(clients_for_predicts), chunk)):
+        target_clients_chunk = clients_for_predicts.iloc[start:start + chunk]
         log.info(f"Chunk {i+1} of {chunk_count}")
         temp_recs = get_temp_recs(
             target_clients_chunk,

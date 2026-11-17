@@ -6,7 +6,7 @@ simple popularity baseline. This is not a client deployment or evidence of sales
 
 ## Run the small case
 
-From `ecom-recs-for-email_docker`, with Python 3.11 (standard library only):
+From `ecom-recs-for-email_docker`, with Python 3.13 (standard library only):
 
 ```sh
 python -m scripts.offline
@@ -110,16 +110,39 @@ python -m ruff check scripts tests
 python -m scripts.offline
 ```
 
-Validated on Windows / Python 3.11.13. The test environment deliberately excludes
+Validated on Windows / Python 3.13.7 and also Python 3.11.13. The test environment deliberately excludes
 LightFM: predictor tests use tiny explicit embeddings and exercise actual CSV I/O
 and sklearn neighbor search. Tests cover temporal boundaries, future independence,
 metric denominators, duplicates, cold start, empty inputs, and original predictor
-regressions. pandas emits NumPy deprecation warnings; they are not test failures.
+regressions. The initial pandas 1.5.2 environment emitted NumPy deprecation warnings; the modern profile removes those warnings.
 The original repository had no tests or configured linter. Running the six predictor
 regression tests against the original source produced ten errors including subtests.
 
-Full LightFM training and Docker integration were NOT validated: LightFM 1.16 and
-1.17 failed package metadata/build setup in this Windows environment
-(`__LIGHTFM_SETUP__`), and the Docker engine was unavailable. The original training
-code/dependencies remain unchanged; no LightFM performance claim is made. The
-benchmark and predictor regression tests can run independently of that limitation.
+## Dependency modernization and remaining blocker
+
+The verified profile is Python 3.13.7 (`.python-version` selects 3.13), NumPy
+2.4.6, pandas 3.1.1, SciPy 1.17.1, scikit-learn 1.9.1, and Ruff 0.14.5.
+`requirements-modern.txt` installs prediction dependencies;
+`requirements-test.txt` adds the linter. The offline benchmark needs none of them.
+A clean Python 3.13 environment was installed and checked; the same tests also
+passed on Python 3.11.13 with the modern scientific libraries.
+
+[pandas 3.1.1](https://pypi.org/project/pandas/3.1.1/) and
+[scikit-learn 1.9.1](https://pypi.org/project/scikit-learn/1.9.1/) were checked
+against their published packages. Versions are an explicitly tested combination,
+not a promise that every dependency is the newest release. Upgrading exposed a
+real compatibility issue: NumPy array_split no longer preserved pandas Series;
+explicit iloc slices now preserve mapping behavior on both old and modern stacks.
+
+Full LightFM training and Docker integration were NOT validated. LightFM 1.16 and
+1.17 failed PEP 517 metadata setup (`__LIGHTFM_SETUP__`). A legacy setup attempt
+with pip 24.3.1/setuptools 68.2.2 got past metadata but failed because Microsoft
+Visual C++ 14+ Build Tools are absent. The Docker engine was unavailable.
+The old `requirements.txt` and Python 3.9 Dockerfile are retained as an explicitly
+unvalidated legacy profile, not recommended as the modern environment. Replacing
+those pins without a successful LightFM build/train check would conceal a blocker.
+No claim of LightFM/NumPy 2 compatibility is made. The next migration step is to
+validate LightFM with a compiler-enabled environment on this machine, then update
+the legacy runtime and training pins together. No compiler or system runtime was
+installed or changed. The new benchmark and tested predictor do not depend on
+LightFM; no LightFM performance claim is made.
