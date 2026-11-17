@@ -22,6 +22,23 @@ class OfflineTests(unittest.TestCase):
         self.assertEqual(model.recommend("unknown", candidates=["missing"]), [])
         self.assertEqual(model.recommend("unknown", k=0), [])
 
+    def test_no_eligible_users_has_no_metrics_even_with_training_catalog(self):
+        for events in (self.train, self.train + [("u", "a", self.cutoff)]):
+            report, _ = evaluate(events, self.cutoff, self.end)
+            self.assertEqual(report["evaluated_users"], 0)
+            for method in ("popularity", "copurchase"):
+                self.assertTrue(all(value is None for value in report[method].values()))
+
+    def test_short_lists_and_ndcg_discount(self):
+        events = self.train + [("cold", "b", self.cutoff),
+                               ("cold", "unseen", self.cutoff)]
+        report, _ = evaluate(events, self.cutoff, self.end, k=3)
+        metrics = report["popularity"]
+        self.assertAlmostEqual(metrics["precision_at_k"], 1 / 3)
+        self.assertEqual(metrics["recall_at_k"], 0.5)
+        self.assertAlmostEqual(metrics["ndcg_at_k"], 0.38685280723454163)
+        self.assertEqual(metrics["catalog_coverage"], 1)
+
     def test_temporal_boundary_and_unknown_target_denominator(self):
         events = self.train + [("u", "b", self.cutoff),
                                ("u", "new", self.cutoff),

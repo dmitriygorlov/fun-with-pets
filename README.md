@@ -2,13 +2,13 @@
 
 Personal projects by Dmitriy Gorlov: turning a business question into an analytical output and defining how to evaluate it. Start with product selection, assortment analysis and sales planning below.
 
-These are independent pet projects and learning experiments, not client engagements or production deployments. No measured revenue lift or online experiment results are claimed. Evaluation methods below are proposed checks, not completed studies.
+These are independent pet projects and learning experiments, not client engagements or production deployments. No measured revenue lift or online experiment results are claimed. Online evaluation methods below are proposed checks. The recommendation benchmark reports reproducible synthetic offline metrics, not business impact.
 
 ## Commerce projects
 
 | Project / question | Input → implemented output | Current limits | How to check usefulness |
 | --- | --- | --- | --- |
-| [Email recommendations](ecom-recs-for-email_docker/) — which products might interest a customer? | Customer–item interactions, target IDs and exclusions → LightFM embeddings and ranked customer–item CSV. Does not send email. | Limited experiment: target-ID edge cases; no holdout evaluation or cold-start fallback. | Compare Recall@K and coverage against popularity on a temporal holdout; then test campaign conversion with a randomized control and unsubscribe guardrail. |
+| [Email recommendations](ecom-recs-for-email_docker/) — which products might interest a customer? | Timestamped synthetic purchases → popularity/co-purchase comparison and ranked CSV; a separate legacy path trains LightFM. Neither sends email. | Offline example has temporal evaluation and cold-user fallback; its tiny designed data do not validate LightFM quality or business impact. | Inspect the reproducible Precision/Recall/NDCG@K and coverage report; validate on real temporal windows before a randomized campaign test with unsubscribe guardrails. |
 | [Sales analytics](auto-sales-analytics_docker/) — which products contribute revenue and how variable are their transactions? | Product ID, unit price and quantity → ABC contribution and XYZ variation tables in Excel. | Local analytical example. XYZ uses transaction revenue variation, not regular-period demand; thresholds depend on this dataset. | Reconcile revenue and product counts. Before inventory use, aggregate regular periods and compare stockouts and inventory cost against the current policy. |
 | [Sales forecasting](forecast-prophet_docker/) — what sales trajectory could inform planning? | Date and sales CSV, country and horizon → Prophet forecast CSVs and plots. | Learning prototype: no backtest or baseline; missing dates are not filled. | Rolling time splits against a seasonal-naive baseline; compare MAE and bias, then the cost of over/under-planning. |
 

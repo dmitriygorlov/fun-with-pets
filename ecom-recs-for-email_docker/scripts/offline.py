@@ -97,7 +97,7 @@ def evaluate(events, cutoff, end, k=3):
             "recall_at_k": sum(recall) / len(recall) if recall else None,
             "ndcg_at_k": sum(ndcg) / len(ndcg) if ndcg else None,
             "catalog_coverage": len(recommended) / len(model.popularity)
-            if model.popularity else None,
+            if model.popularity and targets else None,
         }
     return report, model
 

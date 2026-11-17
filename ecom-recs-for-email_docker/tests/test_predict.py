@@ -16,12 +16,13 @@ class PredictTests(unittest.TestCase):
             path.touch()
             self.assertTrue(read_input(path, ["client_id"]).empty)
 
-    def run_case(self, clients, items, exclusions=(), k=3):
+    def run_case(self, clients, items, exclusions=(), k=3,
+                 user_ids=(1, 2), item_ids=(10, 20)):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             fitted = {
-                "clients_mapping": {1: 0, 2: 1},
-                "items_mapping": {10: 0, 20: 1},
+                "clients_mapping": dict(zip(user_ids, range(2))),
+                "items_mapping": dict(zip(item_ids, range(2))),
                 "items_embeddings": np.array([[1., 0.], [0., 1.]]),
                 "client_embeddings": np.array([[1., 0.], [0., 1.]]),
             }
@@ -38,6 +39,14 @@ class PredictTests(unittest.TestCase):
 
     def test_singleton(self):
         self.assertEqual(self.run_case([1], [10]).values.tolist(), [[1, 10, 1]])
+
+    def test_string_and_large_integer_ids(self):
+        for users, items in [(('user-a', 'user-b'), ('item-a', 'item-b')),
+                             ((2**40, 2**40 + 1), (2**41, 2**41 + 1))]:
+            with self.subTest(users=users):
+                result = self.run_case([users[0]], [items[0]],
+                                       user_ids=users, item_ids=items)
+                self.assertEqual(result.values.tolist(), [[users[0], items[0], 1]])
 
     def test_unknowns_are_removed(self):
         self.assertEqual(self.run_case([1, 999], [10, 999]).values.tolist(), [[1, 10, 1]])

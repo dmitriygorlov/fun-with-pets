@@ -1,14 +1,23 @@
 # Portfolio overview
 
-This catalog describes checked-in implementations, not future improvements. All seven projects are personal work. Evaluation methods in the [README](README.md) are proposed, not measured outcomes.
+This catalog describes checked-in implementations, not future improvements. All seven projects are personal work. Online evaluation methods in the [README](README.md) are proposed. Synthetic offline metrics demonstrate execution, not measured business outcomes.
 
-## Recommendations: limited experiment
+## Recommendations: offline example and legacy pipeline
+
+The [standard-library benchmark](ecom-recs-for-email_docker/scripts/offline.py) reads [20 hand-authored synthetic purchases](ecom-recs-for-email_docker/examples/events.csv). From the repository root:
+
+```powershell
+cd ecom-recs-for-email_docker
+python -m scripts.offline
+```
+
+It writes `results/offline.json` (Precision/Recall/NDCG@K and catalog coverage) and `results/offline.csv` (co-purchase recommendations for training customers). Popularity and co-purchase rankings use only pre-cutoff histories and items. Targets come from a later fixed window; unknown products remain in the recall denominator. Cold users receive popularity fallback. See the [evaluation contract](ecom-recs-for-email_docker/README.md#ranking-and-evaluation-contract) for exact cohorts and the measured synthetic example. These are not LightFM performance results.
 
 [Training](ecom-recs-for-email_docker/scripts/train.py) reads the first two columns of `files/client_item.csv` as customer and item IDs, builds unweighted interactions and trains LightFM with WARP loss. [Prediction](ecom-recs-for-email_docker/scripts/predict.py) reads the first column of `clients.csv` and `items.csv`, and the first two columns of `exclude.csv`, to retrieve candidates and exclude purchases. Inputs are under [files](ecom-recs-for-email_docker/files/).
 
 Output: `results/predict_clients_items_rank.csv` with `client_id`, `item_id`, `rank`; embeddings and mappings go under `mappings_embeddings/`. [Settings](ecom-recs-for-email_docker/settings.py) request up to 10 recommendations after filtering, not a guarantee of 10 items per customer.
 
-Source-review limits: the DataFrame mask can retain unknown IDs as missing values; squeezing a single target can change its shape. No temporal holdout, popularity baseline, cold-start policy or online evaluation is implemented. Check IDs, exclusions and output coverage before evaluating ranking quality. This module was not changed for the catalog.
+The legacy predictor now filters unknown IDs and preserves Series shape for singleton and chunked inputs; empty targets produce a header-only CSV. It skips cold users rather than applying the offline benchmark's fallback. Candidate limits can still yield fewer than K recommendations after exclusions. No LightFM temporal quality evaluation or online experiment is supplied. CSV ID types must agree across files.
 
 ## Sales analytics: local example
 
@@ -45,7 +54,7 @@ No rolling backtest, baseline comparison or accuracy report is present. Missing 
 
 ## Container entry points
 
-The commands match checked-in paths, Compose services and Dockerfile entry points. They are **source-checked instructions, not successful container-run claims**. Docker's client and Compose were available, but the Linux daemon was unavailable. Dependencies are not fully locked across the repository.
+The commands match checked-in paths, Compose services and Dockerfile entry points. They are **source-checked instructions, not successful container-run claims**. The initial documentation review had no running Linux daemon. At integration review the daemon was available; only explicitly recorded runtime checks below establish execution. Dependencies are not fully locked across the repository.
 
 Run each block independently from the repository root, with Docker running:
 
@@ -82,11 +91,12 @@ The [translation](Is-it-simple_bot/README.md), [GPT bot](gpt_helper_bot/README.m
 
 ## Verification record
 
-Review baseline: `7fb0f48322976d8189b1b009e982b7b8d84b53c8`.
+Initial review baseline: `7fb0f48322976d8189b1b009e982b7b8d84b53c8`. Integration also includes recommendation branch `409d355b0b5668d45ae5c7f5bb80ad4259d4e4da` and review fixes.
 
 - Inspected all seven project entry points and commerce processing code; no repository `AGENTS.md` was present.
 - Ran the sales walkthrough's function calls on the supplied CSV in an isolated Python 3.13 environment (pandas 3.1.1, NumPy 2.5.5, SciPy 1.18.1, openpyxl 3.1.5), with outputs outside the checkout. Both Excel files were written and read back; sheet names, product coverage and classification counts matched, and ABC revenue reconciled to the input. This checks sample execution, not business effectiveness or the Python 3.10 container.
 - All relative links and heading anchors in these two documents passed local checks. Sales and recommendation Compose configurations passed `docker compose ... config --quiet`, with warnings about the obsolete `version` key.
-- Container execution, external services, hosted demos and business impact were not verified.
+- Independent integration review checked the complete recommendation diff and separately reviewed this catalog. On the combined code, all 17 unit tests passed with the pinned modern Python 3.13 profile, alongside Ruff and `pip check`. Added checks cover string/large-integer IDs, short-list metric denominators and empty evaluation cohorts; coverage is now null when no users are eligible. The offline CLI reproduced the module README's synthetic metrics. These checks do not train LightFM.
+- Sales/forecast container execution, external services, hosted demos and business impact were not verified.
 
 A **local example** exercises analytical functions on supplied input; a **learning prototype** implements a workflow without outcome validation; a **limited experiment** additionally has concrete integration or input-handling constraints. None implies production readiness.
