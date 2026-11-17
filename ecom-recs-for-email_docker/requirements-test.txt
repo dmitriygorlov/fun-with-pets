@@ -1,0 +1,2 @@
+-r requirements-modern.txt
+ruff==0.14.5
