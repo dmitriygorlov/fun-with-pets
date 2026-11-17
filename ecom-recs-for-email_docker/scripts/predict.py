@@ -8,6 +8,15 @@ from sklearn.neighbors import NearestNeighbors
 log = Logger("predict_script", "predict_script.log")
 
 
+def read_input(path, columns):
+    try:
+        frame = pd.read_csv(path, usecols=list(range(len(columns))))
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame(columns=columns)
+    frame.columns = columns
+    return frame
+
+
 def generate_item_recommendations_for_clients(
     fited_data_path,
     clients_path,
@@ -30,12 +39,9 @@ def generate_item_recommendations_for_clients(
     with open(fited_data_path, "rb") as f:
         fited_data = pickle.load(f)
 
-    clients = pd.read_csv(clients_path, usecols=[0])
-    clients.columns = ["client_id"]
-    items = pd.read_csv(items_path, usecols=[0])
-    items.columns = ["item_id"]
-    exclude = pd.read_csv(exclude_path, usecols=[0, 1])
-    exclude.columns = ["client_id", "item_id"]
+    clients = read_input(clients_path, ["client_id"])
+    items = read_input(items_path, ["item_id"])
+    exclude = read_input(exclude_path, ["client_id", "item_id"])
     exclude["purchased"] = 1
 
     clients_mapping = fited_data["clients_mapping"]
@@ -48,8 +54,19 @@ def generate_item_recommendations_for_clients(
         f"Data loaded. I got {len(clients)} clients and {len(items)} items to predict and {exclude.shape[0]} previous purchases to exclude"
     )
     # map clients and items to their respective mappings
-    clients_for_predicts = clients[clients.isin(list(clients_mapping.keys()))].squeeze()
-    items_for_predicts = items[items.isin(list(items_mapping.keys()))].squeeze()
+    if k < 0 or chunk < 1 or n_neighbors < 1:
+        raise ValueError("Require k >= 0, chunk >= 1 and n_neighbors >= 1")
+    clients_for_predicts = clients.loc[
+        clients["client_id"].isin(clients_mapping), "client_id"
+    ].drop_duplicates().reset_index(drop=True)
+    items_for_predicts = items.loc[
+        items["item_id"].isin(items_mapping), "item_id"
+    ].drop_duplicates().reset_index(drop=True)
+    if clients_for_predicts.empty or items_for_predicts.empty or k == 0:
+        pd.DataFrame(columns=["client_id", "item_id", "rank"]).to_csv(
+            result_path, index=False
+        )
+        return
 
     # filter previous purchases to exclude that are in the clients and items to predict
     previous_purchased_items = exclude[
@@ -70,7 +87,7 @@ def generate_item_recommendations_for_clients(
     n_neighbors = min(n_neighbors, items_vectors.shape[0])
 
     # count chunks of clients
-    chunk_count = int(clients_for_predicts.shape[0] / chunk) + 1
+    chunk_count = (len(clients_for_predicts) + chunk - 1) // chunk
 
     log.info(
         f"Start predicting {n_neighbors} items (before filter to {k} items) for {clients_for_predicts.shape[0]} clients in {chunk_count} chunks"
@@ -95,8 +112,6 @@ def generate_item_recommendations_for_clients(
         )
 
     df_result["rank"] = df_result["rank"].astype("int32")
-    df_result["item_id"] = df_result["item_id"].astype("int32")
-    df_result["client_id"] = df_result["client_id"].astype("int32")
 
     log.info(f"Saving results to {result_path}")
     df_result.to_csv(result_path, index=False)

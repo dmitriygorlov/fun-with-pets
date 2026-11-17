@@ -1,10 +1,12 @@
 import logging
+from pathlib import Path
 
 
 class Logger:
     def __init__(self, name, file_name):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.INFO)
+        Path("logs").mkdir(exist_ok=True)
         self.file_handler = logging.FileHandler(f"logs/{file_name}")
         self.file_handler.setFormatter(
             logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
