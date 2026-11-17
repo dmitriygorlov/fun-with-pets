@@ -1,22 +1,30 @@
-# Fun With Pets 🐈‍⬛🐕
+# Fun With Pets — Applied / Product Data Science
 
-Welcome to `Fun With Pets` - a collection of pet projects that showcases the power of technology to innovate and solve real-world challenges. Just like a zoo that houses many diverse creatures, this repository holds a variety of exciting projects that cater to different interests.
+Personal projects by Dmitriy Gorlov: turning a business question into an analytical output and defining how to evaluate it. Start with product selection, assortment analysis and sales planning below.
 
-Here's a brief overview of what you'll find:
+These are independent pet projects and learning experiments, not client engagements or production deployments. No measured revenue lift or online experiment results are claimed. Evaluation methods below are proposed checks, not completed studies.
 
-1. [Is It Simple](https://github.com/dmitriygorlov/fun-with-pets/tree/main/Is-it-simple_bot): A Telegram bot leveraging the power of the [`translation`](https://pypi.org/project/translators/) library to provide double translation functionality. The goal is to explore the intricacies and sometimes humorous results of translating between languages.
+## Commerce projects
 
-2. [Easy Recs for Ecommerce based on Sales](https://github.com/dmitriygorlov/fun-with-pets/tree/main/ecom-recs-for-email_docker): A robust yet easy-to-launch recommendation system for e-commerce email campaigns. This project utilizes `Docker` for simplified deployment and the [`LightFM`](https://github.com/lyst/lightfm) library for efficient recommendation computation.
+| Project / question | Input → implemented output | Current limits | How to check usefulness |
+| --- | --- | --- | --- |
+| [Email recommendations](ecom-recs-for-email_docker/) — which products might interest a customer? | Customer–item interactions, target IDs and exclusions → LightFM embeddings and ranked customer–item CSV. Does not send email. | Limited experiment: target-ID edge cases; no holdout evaluation or cold-start fallback. | Compare Recall@K and coverage against popularity on a temporal holdout; then test campaign conversion with a randomized control and unsubscribe guardrail. |
+| [Sales analytics](auto-sales-analytics_docker/) — which products contribute revenue and how variable are their transactions? | Product ID, unit price and quantity → ABC contribution and XYZ variation tables in Excel. | Local analytical example. XYZ uses transaction revenue variation, not regular-period demand; thresholds depend on this dataset. | Reconcile revenue and product counts. Before inventory use, aggregate regular periods and compare stockouts and inventory cost against the current policy. |
+| [Sales forecasting](forecast-prophet_docker/) — what sales trajectory could inform planning? | Date and sales CSV, country and horizon → Prophet forecast CSVs and plots. | Learning prototype: no backtest or baseline; missing dates are not filled. | Rolling time splits against a seasonal-naive baseline; compare MAE and bias, then the cost of over/under-planning. |
 
-3. [GPT Bot in Telegram with Restricted Access](https://github.com/dmitriygorlov/fun-with-pets/tree/main/gpt_helper_bot): A Telegram bot reminiscent of [`ChatGPT`](https://chat.openai.com/) that employs the OpenAI API. It features a password-restricted system, providing secure access to AI-generated responses.
+See the [portfolio overview](portfolio-overview.md) for exact inputs, outputs, commands and verification boundaries.
 
-4. [Auto Sales Analysis](https://github.com/dmitriygorlov/fun-with-pets/tree/main/auto-sales-analytics_docker): A practical and stylish way to analyze your sales data. It uses `docker-compose` to ensure a smooth setup and execution process, enabling quick generation of ABC, XYZ, and other analytics for your sales data.
+## Other experiments
 
-5. [Airflow Jokes Pipeline](https://github.com/dmitriygorlov/fun-with-pets/tree/main/jokes-aside_airflow): Automating the retrieval, storage, and distribution of jokes using [`Apache Airflow`](https://airflow.apache.org/) with `Docker`. This project fetches a random joke, stores it in a `PostgreSQL` database, and shares it via email — all through a single command.
+| Project | Input → output / purpose | Limits and proposed check |
+| --- | --- | --- |
+| [Probability visualizer](probability-endurance_streamlit/) | Probability and trial count → curve for at least one success, `1 - (1-p)^n`. | Educational prototype assuming independent trials and constant probability. Boundary inputs need fixes. Check formula and comprehension, not real-world success predictions. |
+| [Translation bot](Is-it-simple_bot/) | Telegram text → Russian → Turkish → Russian translation. | Limited external-service experiment. Round-trip similarity is not translation quality; use human review of representative phrases. |
+| [GPT helper bot](gpt_helper_bot/) | Telegram prompts → API responses, conversation history and usage records. | Limited integration experiment using a legacy API interface. Passwords and prompts are logged. Review data handling; evaluate task completion and cost on a fixed prompt set. |
+| [Airflow jokes pipeline](jokes-aside_airflow/) | Public joke API → PostgreSQL → email task. | Educational orchestration prototype requiring database/email configuration. Check retries, duplicates and delivery in a controlled environment. |
 
-6. [Success Probability Visualizer](https://github.com/dmitriygorlov/fun-with-pets/tree/main/probability-endurance_streamlit): An interactive web application that demystifies the concept of cumulative success probability through visual and numerical storytelling. Built with `Streamlit` and `Plotly`, this project employs `Docker` for hassle-free deployment, making it accessible to anyone curious about the statistical chances of success over repeated attempts. It's designed to inspire persistence and illustrate the mathematical principle that "the more you try, the luckier you get."
+## Start here
 
-7. [Sales Forecasting with Prophet](https://github.com/dmitriygorlov/fun-with-pets/tree/main/forecast-prophet_docker): Streamlining e-commerce sales forecasting with the power of Facebook's [`Prophet`](https://github.com/facebook/prophet/) within a `Docker`ized environment. This project automates the process of forecasting future sales by analyzing time series data, providing both summary and detailed forecasts alongside insightful visualizations. It's designed for simplicity, requiring minimal setup, and caters to users seeking actionable insights into sales trends without deep diving into complex statistical models.
+Use the [local sales walkthrough](portfolio-overview.md#sales-analytics-local-example) for a small example, or inspect the [container entry points](portfolio-overview.md#container-entry-points). Each project has independent dependencies; there is no shared platform or universal setup command.
 
-
-The goal of this collection is not only to provide useful solutions and insights but also to inspire and motivate you to create your own projects. Enjoy exploring!
+[MIT license](LICENSE)
