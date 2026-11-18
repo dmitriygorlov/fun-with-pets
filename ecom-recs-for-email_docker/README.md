@@ -118,7 +118,7 @@ regressions. The initial pandas 1.5.2 environment emitted NumPy deprecation warn
 The original repository had no tests or configured linter. Running the six predictor
 regression tests against the original source produced ten errors including subtests.
 
-## Dependency modernization and remaining blocker
+## Dependency profiles and container verification
 
 The verified profile is Python 3.13.7 (`.python-version` selects 3.13), NumPy
 2.4.6, pandas 3.1.1, SciPy 1.17.1, scikit-learn 1.9.1, and Ruff 0.14.5.
@@ -134,15 +134,30 @@ not a promise that every dependency is the newest release. Upgrading exposed a
 real compatibility issue: NumPy array_split no longer preserved pandas Series;
 explicit iloc slices now preserve mapping behavior on both old and modern stacks.
 
-Full LightFM training and Docker integration were NOT validated. LightFM 1.16 and
-1.17 failed PEP 517 metadata setup (`__LIGHTFM_SETUP__`). A legacy setup attempt
-with pip 24.3.1/setuptools 68.2.2 got past metadata but failed because Microsoft
-Visual C++ 14+ Build Tools are absent. The Docker engine was unavailable.
-The old `requirements.txt` and Python 3.9 Dockerfile are retained as an explicitly
-unvalidated legacy profile, not recommended as the modern environment. Replacing
-those pins without a successful LightFM build/train check would conceal a blocker.
-No claim of LightFM/NumPy 2 compatibility is made. The next migration step is to
-validate LightFM with a compiler-enabled environment on this machine, then update
-the legacy runtime and training pins together. No compiler or system runtime was
-installed or changed. The new benchmark and tested predictor do not depend on
-LightFM; no LightFM performance claim is made.
+Container follow-up on Upper (2026-11-18): the original Python 3.9 image built,
+but failed at startup with pandas 1.5.2 / NumPy 2.0.2 binary incompatibility
+(`numpy.dtype size changed`). The Dockerfile now uses Python 3.11 and a
+separate training profile: LightFM 1.17, NumPy 1.26.4, pandas 2.3.3, SciPy 1.17.1,
+and scikit-learn 1.9.1. The actual tested Python was 3.11.18 on Linux / GCC 14.2.0,
+Docker Engine 29.5.3. LightFM requires a legacy build path with pip 24.3.1,
+setuptools 68.2.2 and wheel 0.45.1; these are compatibility pins, not newest versions.
+The modern prediction-only profile remains separate; do not install both profiles
+into the same environment. Native Windows LightFM still needs C++ Build Tools.
+
+The fixed image built successfully. An isolated run of the actual main.py on 12
+synthetic training pairs completed four epochs and returned 18 recommendations.
+Assertions verified uniqueness, exclusion of prior purchases and unknown IDs.
+All 14 original tests passed in that check. Integration review adds three tests for
+ID types, metric denominators and empty cohorts; the final 17-test suite, temporal
+benchmark CLI and pip check were rerun on the combined code.
+This is a functional smoke test, not a LightFM ranking-quality or revenue claim.
+pandas 2.3 emits a nonfatal concat FutureWarning in the predictor.
+
+The test used no Compose startup or .env: docker run had --network none,
+--read-only, --cap-drop ALL, --security-opt no-new-privileges, read-only synthetic
+input/test mounts, and tmpfs for logs, results and embeddings. .dockerignore now
+allowlists source files so data and secrets cannot enter the build context.
+Compose configuration was inspected but its default host mounts were not used.
+Production-scale performance, real data, and Compose startup remain outside this
+verification. No service was deployed. Base image/transitive dependency versions are
+not fully locked, so future rebuilds still require regression checks.

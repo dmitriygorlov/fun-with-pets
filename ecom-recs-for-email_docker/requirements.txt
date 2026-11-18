@@ -1,2 +1,6 @@
-lightfm==1.16
-pandas==1.5.2
+# LightFM training profile; modern prediction-only profile is separate.
+lightfm==1.17
+numpy==1.26.4
+pandas==2.3.3
+scipy==1.17.1
+scikit-learn==1.9.1
