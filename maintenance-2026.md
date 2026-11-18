@@ -57,3 +57,5 @@ All six Docker images built successfully. All six environments passed `python -m
 - Ruff 0.17.5 check/format and `git diff --check` passed for the changed projects. Sales and Airflow Compose config validation passed. Forecast Compose still requires the documented local `.env` file.
 
 Temporary test containers used `--rm`; the named UI/Airflow smoke containers were stopped explicitly. No pre-existing containers, images, volumes, branches or working copies were modified. Task image tags may remain as build cache. Existing user branch tips were checked before integration.
+
+The root devcontainer now builds the same checked probability Dockerfile instead of a separate Python 3.11/unpinned Streamlit environment. Paths use forward slashes and Streamlit CORS/XSRF defaults remain enabled. JSON and referenced paths were validated; a hosted Codespaces session was not provisioned.

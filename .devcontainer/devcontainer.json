@@ -1,29 +1,29 @@
 {
-  "name": "Python 3",
-  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bullseye",
+  "name": "Probability visualizer",
+  "build": {
+    "dockerfile": "../probability-endurance_streamlit/Dockerfile",
+    "context": "../probability-endurance_streamlit"
+  },
   "customizations": {
     "codespaces": {
       "openFiles": [
         "README.md",
-        "probability-endurance_streamlit\main.py"
+        "probability-endurance_streamlit/main.py"
       ]
     },
     "vscode": {
-      "settings": {},
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance"
       ]
     }
   },
-  "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; pip3 install --user streamlit; echo '✅ Packages installed and Requirements met'",
   "postAttachCommand": {
-    "server": "streamlit run probability-endurance_streamlit\main.py --server.enableCORS false --server.enableXsrfProtection false"
+    "server": "streamlit run probability-endurance_streamlit/main.py --server.address=0.0.0.0"
   },
   "portsAttributes": {
     "8501": {
-      "label": "Application",
+      "label": "Probability visualizer",
       "onAutoForward": "openPreview"
     }
   },
