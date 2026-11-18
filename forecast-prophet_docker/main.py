@@ -12,7 +12,7 @@ def main():
     load_dotenv()
     try:
         country = os.getenv("COUNTRY", "US")
-        periods = int(os.getenv("FORECAST_DAYS", 365))
+        periods = int(os.getenv("FORECAST_DAYS", "365"))
         filepath = os.getenv("FILEPATH", "/data/example.csv")
     except Exception as e:
         print(f"Error loading environment variables: {e}")

@@ -1,0 +1,42 @@
+name: Offline project checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  containers:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [auto-sales-analytics_docker, forecast-prophet_docker, probability-endurance_streamlit, Is-it-simple_bot, gpt_helper_bot, jokes-aside_airflow]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - run: docker build -t project-check "${{ matrix.project }}"
+      - name: Offline regression suite
+        run: docker run --rm --network none --entrypoint python -v "$PWD/${{ matrix.project }}:/work:ro" -w /work project-check -m unittest discover -s tests -v
+      - run: docker run --rm --network none --entrypoint python project-check -m pip check
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.14'
+      - run: pip install ruff==0.17.5
+      - run: ruff check --config maintenance-ruff.toml auto-sales-analytics_docker forecast-prophet_docker probability-endurance_streamlit Is-it-simple_bot gpt_helper_bot jokes-aside_airflow
+  preserved-ecom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.13'
+      - run: pip install -r ecom-recs-for-email_docker/requirements-test.txt
+      - working-directory: ecom-recs-for-email_docker
+        run: |
+          python -m unittest discover -s tests -v
+          python -m ruff check scripts tests
+          python -m pip check
+          python -m scripts.offline

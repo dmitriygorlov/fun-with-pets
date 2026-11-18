@@ -55,3 +55,17 @@ When you're done using the bot, you can stop it by pressing `Ctrl+C` in the term
 Congratulations, your chatbot is now running! You've successfully set up and run your own AI chatbot. Remember to keep it safe and don't share your bot's password or .env file with anyone.
 
 Keep coding, and remember: you're amazing!
+
+
+## Compatibility update (2026-11-18)
+
+Python 3.14; aiogram 3.32.0, OpenAI SDK 3.55.0, python-dotenv 1.2.4. AsyncOpenAI replaces synchronous legacy ChatCompletion. `OPENAI_MODEL` is configurable (default `gpt-4.1-mini`; access is not verified by paid calls). `DATA_DIR` defaults to the working directory. Existing allowed_users.csv, stats.csv and conversation_history.json schemas are preserved; back them up before changing versions. Passwords/prompts are not logged; history JSON intentionally still stores conversations. CSV/JSON updates are serialized and individually replaced atomically; this is a single-process prototype, not a transactional database or multi-worker service. Usage is persisted after each successful model response. Failed API requests leave history unchanged. No real API or Telegram calls were made.
+
+Offline regression checks from this project directory, after installing requirements:
+
+```sh
+python -m unittest discover -s tests -v
+python -m pip check
+```
+
+See [maintenance record](../maintenance-2026.md) for container validation and limitations.

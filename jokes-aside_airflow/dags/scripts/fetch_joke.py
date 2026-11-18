@@ -1,11 +1,20 @@
+from html import escape
+
 import requests
-from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
 def fetch_and_store_joke():
     # Fetch joke from API
-    response = requests.get("https://official-joke-api.appspot.com/random_joke")
+    response = requests.get(
+        "https://official-joke-api.appspot.com/random_joke", timeout=15
+    )
+    response.raise_for_status()
     data = response.json()
+    if not all(
+        isinstance(data.get(key), str) and data[key] for key in ("setup", "punchline")
+    ):
+        raise ValueError("Joke API returned invalid content")
 
     # Get Postgres connection
     pg_hook = PostgresHook(postgres_conn_id="jokes_conn")
@@ -37,10 +46,6 @@ def fetch_joke_from_db():
     pg_hook = PostgresHook(postgres_conn_id="jokes_conn")
     select_sql = """SELECT setup, punchline FROM jokes ORDER BY id DESC LIMIT 1"""
     joke = pg_hook.get_first(select_sql)
-    return joke[0] + " - " + joke[1]
-
-
-# If you want to test this script alone
-if __name__ == "__main__":
-    fetch_and_store_joke()
-    fetch_joke_from_db()
+    if not joke:
+        raise ValueError("No joke found")
+    return escape(joke[0]) + " - " + escape(joke[1])

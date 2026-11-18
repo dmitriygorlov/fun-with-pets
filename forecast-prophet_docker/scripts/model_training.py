@@ -1,7 +1,7 @@
 from prophet import Prophet
 
 
-def train_model(df, country):
+def train_model(df, country, seed=42):
     """
     Train the Prophet model with the prepared data and add holidays based on the country specified in the .env file (if available)
     """
@@ -13,5 +13,5 @@ def train_model(df, country):
     except KeyError:
         print(f"No holidays found for {country}")
 
-    model.fit(df)
+    model.fit(df, seed=seed)
     return model

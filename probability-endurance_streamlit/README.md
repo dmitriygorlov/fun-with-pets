@@ -36,3 +36,17 @@ This project utilizes Python, Streamlit, and Plotly to create an engaging web ap
 ## Conclusion
 
 The Success Probability Visualizer serves as a practical and motivational tool, encouraging users to persist in their efforts by providing a clear visual and numerical representation of how persistence increases the odds of success. It's a vivid reminder that sometimes, success is just a matter of trying one more time.
+
+
+## Compatibility update (2026-11-18)
+
+Python 3.14; Streamlit 1.67.0 and Plotly 7.1.0. Zero probability gives an infinite 95% waiting time; probability one needs one trial. Invalid fractions stop with a UI error. Stable log1p/expm1 arithmetic preserves small probabilities. The chart samples at most 1,000 points while the requested trial count and displayed result remain exact. Trials are assumed independent with constant probability.
+
+Offline regression checks from this project directory, after installing requirements:
+
+```sh
+python -m unittest discover -s tests -v
+python -m pip check
+```
+
+See [maintenance record](../maintenance-2026.md) for container validation and limitations.

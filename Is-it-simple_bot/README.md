@@ -32,3 +32,16 @@ export TOKEN=<here is your super duper secret code>
 docker run --rm -d -e TOKEN=$TOKEN is_it_simple:love.dmitrii
 ```
 5. You are amazing <3
+
+## Compatibility update (2026-11-18)
+
+Python 3.14; aiogram 3.32.0 replaces the v2 handler/executor API. deep-translator 1.11.4 replaces translators; Russian/Turkish round trips remain. Blocking translation runs off the event loop, non-text messages and failures are handled, and replies use plain text to avoid Markdown injection. The external Google translation service remains unofficial and may change/rate-limit; only mocks were exercised, not live translations or Telegram delivery.
+
+Offline regression checks from this project directory, after installing requirements:
+
+```sh
+python -m unittest discover -s tests -v
+python -m pip check
+```
+
+See [maintenance record](../maintenance-2026.md) for container validation and limitations.

@@ -1,47 +1,44 @@
-import logging
+import asyncio
 import os
 
-import translators as tss
-from aiogram import Bot, Dispatcher, executor, types
-
-APP_TOKEN = os.getenv("TOKEN")
-
-# Bot itself
-bot = Bot(token=APP_TOKEN)
-# Dispatcher
-dp = Dispatcher(bot)
-# ВSome yummy loggies
-logging.basicConfig(level=logging.INFO)
-
-lang_1 = "ru"
-lang_2 = "tr"
+from aiogram import Bot, Dispatcher
+from deep_translator import GoogleTranslator
 
 
-@dp.message_handler()
-async def all_todo(message: types.Message):
-    await message.reply(
-        f"""
-*I work as __{lang_1}\>{lang_2}\>{lang_1}__ by Google Translate*
-    """,
-        parse_mode="MarkdownV2",
-    )
-    text = message["text"]
-    trans = tss.google(text, from_language=lang_1, to_language=lang_2)
-    text_back = tss.google(trans, from_language=lang_2, to_language=lang_1)
+def round_trip(text):
+    translated = GoogleTranslator(source="ru", target="tr").translate(text)
+    return translated, GoogleTranslator(source="tr", target="ru").translate(translated)
 
-    await message.reply(
-        f"""
-*Start:* {text}
-*Translated:* {trans}
-*Translated back:* {text_back}""",
-        parse_mode="MarkdownV2",
+
+async def all_todo(message, translate=round_trip):
+    if not message.text:
+        await message.answer("Please send text.")
+        return
+    if len(message.text) > 4000:
+        await message.answer("Please send at most 4000 characters.")
+        return
+    try:
+        translated, back = await asyncio.to_thread(translate, message.text)
+    except Exception:  # noqa: BLE001 - external translator failures must not leak user text
+        await message.answer("Translation service unavailable. Please try later.")
+        return
+    # Plain text avoids treating user input as Telegram Markdown.
+    output = f"Russian > Turkish > Russian\nStart: {message.text}\nTranslated: {translated}\nTranslated back: {back}"
+    for offset in range(0, len(output), 4000):
+        await message.reply(output[offset : offset + 4000])
+    await message.answer(
+        "Wow, like word to word"
+        if message.text == back
+        else "Not exactly the same, right?"
     )
 
-    if text == text_back:
-        await message.answer(f"""Wow, like word to word""")
-    else:
-        await message.answer(f"""Not exactly the same, right?""")
+
+async def main():
+    bot = Bot(token=os.environ["TOKEN"])
+    dp = Dispatcher()
+    dp.message.register(all_todo)
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(main())

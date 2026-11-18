@@ -1,209 +1,181 @@
+"""Single-process Telegram helper. Importing this module makes no network calls."""
+
+import asyncio
+import csv
+import hmac
+import json
 import logging
 import os
-from datetime import datetime
-import json
+from datetime import UTC, datetime
+from pathlib import Path
 
-import openai
-import pandas as pd
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
+from openai import AsyncOpenAI, OpenAIError
 
-# Load environment variables from .env file
-load_dotenv()
-
-
-def load_env(name):
-    value = os.getenv(name)
-    if value is None:
-        raise ValueError(f"Missing environment variable '{name}'")
-    value = str(value)
-    return value
-
-
-# Initialize logger
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize bot and dispatcher
-bot_token = load_env("TELEGRAM_BOT_TOKEN")
-if bot_token is None:
-    raise ValueError("Missing environment variable 'TELEGRAM_BOT_TOKEN'")
-bot = Bot(token=bot_token)
-dp = Dispatcher(bot)
 
-# Load authorized users from CSV file
-allowed_users_file = "allowed_users.csv"
-if os.path.exists(allowed_users_file):
-    allowed_users = pd.read_csv(allowed_users_file)
-    allowed_users["user_id"] = allowed_users["user_id"].astype(str)
-    allowed_users.set_index("user_id", inplace=True)
-else:
-    allowed_users = pd.DataFrame(columns=["user_id", "datetime_added"])
-    allowed_users["user_id"] = allowed_users["user_id"].astype(str)
-    allowed_users.set_index("user_id", inplace=True)
+def read_csv(path):
+    if not path.exists():
+        return {}
+    with path.open(newline="", encoding="utf-8") as handle:
+        return {row["user_id"]: row for row in csv.DictReader(handle)}
 
 
-# Initialize stats DataFrame
-stats_file = "stats.csv"
-if os.path.exists(stats_file):
-    stats = pd.read_csv(stats_file)
-    stats["user_id"] = stats["user_id"].astype(str)
-    stats.set_index("user_id", inplace=True)
-else:
-    stats = pd.DataFrame(
-        columns=[
-            "user_id",
-            "message_count",
-            "last_message_datetime",
-            "prompt_tokens_amount",
-            "completion_tokens_amount",
-        ]
-    )
-    stats["user_id"] = stats["user_id"].astype(str)
-    stats.set_index("user_id", inplace=True)
-
-# Initialize a dictionary to store conversation history for each user
-conversation_history_file = "conversation_history.json"
-if os.path.exists(conversation_history_file):
-    with open(conversation_history_file, "r") as f:
-        conversation_history = json.load(f)
-else:
-    conversation_history = {}
-
-# Some batch settings
-batch_size = 2
-batch_updates = []
-
-# Pass settings to the bot
-bot_password = load_env("BOT_PASSWORD")
-first_symbol = load_env("FIRST_SYMBOL")
-continue_symbol = load_env("CONTINUE_SYMBOL")
+def write_csv(path, rows, fields):
+    temp = path.with_suffix(".tmp")
+    with temp.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows.values())
+    temp.replace(path)
 
 
-# Load openai settings
-openai.api_key = load_env("OPENAI_API_KEY")
-model = "gpt-3.5-turbo"
-pre = "You are a helpful chatbot that helps people with their problems. Make short and useful answers."
-
-
-# On message event handler for authorized users
-@dp.message_handler(lambda message: str(message.from_user.id) in allowed_users.index)
-async def handle_message(message: types.Message):
-    global batch_updates
-    user_id = str(message.from_user.id)
-
-    if user_id not in conversation_history:
-        logger.info(f"User {user_id} started a new conversation")
-        conversation_history[user_id] = []
-
-    if message.text.startswith(first_symbol):
-        # When a new conversation starts, clear the history
-        conversation_history[user_id] = [
-            {"role": "system", "content": pre},
-            {"role": "user", "content": message.text[len(first_symbol) :]},
-        ]
-    elif message.text.startswith(continue_symbol):
-        # When the conversation continues, append the user's message to the history
-        conversation_history[user_id].append(
-            {"role": "user", "content": message.text[len(continue_symbol) :]}
+class Helper:
+    def __init__(
+        self,
+        client,
+        password,
+        first_symbol,
+        continue_symbol,
+        directory=".",
+        model="gpt-4.1-mini",
+    ):
+        if (
+            not password
+            or not first_symbol
+            or not continue_symbol
+            or first_symbol == continue_symbol
+        ):
+            raise ValueError("Password and distinct command prefixes are required")
+        self.client, self.password, self.model = client, password, model
+        self.first, self.continue_symbol = first_symbol, continue_symbol
+        self.directory = Path(directory)
+        self.directory.mkdir(parents=True, exist_ok=True)
+        self.allowed = read_csv(self.directory / "allowed_users.csv")
+        self.stats = read_csv(self.directory / "stats.csv")
+        history_path = self.directory / "conversation_history.json"
+        self.history = (
+            json.loads(history_path.read_text(encoding="utf-8"))
+            if history_path.exists()
+            else {}
         )
-    else:
-        # If the message does not start with a special symbol, ignore it
-        await message.answer("Please start your message with a special symbol")
-        return
+        self.lock = asyncio.Lock()
 
-    retrieval = openai.ChatCompletion.create(
-        model=model,
-        messages=conversation_history[user_id],
-    )
+    async def handle(self, message):
+        if message.from_user is None or not message.text:
+            await message.answer("Please send text.")
+            return
+        # Serializes CSV/JSON writes and same-user conversations in this single-process bot.
+        async with self.lock:
+            await self._handle(message)
 
-    answer = retrieval["choices"][0]["message"]["content"]  # type: ignore
-
-    conversation_history[user_id].append(
-        {"role": "assistant", "content": answer}
-    )  # Add the assistant's response to the conversation history
-
-    # Save conversation history to file
-    with open(conversation_history_file, "w") as f:
-        json.dump(conversation_history, f)
-
-    await message.answer(answer)
-
-    prompt_tokens_amount = retrieval["usage"]["prompt_tokens"]  # type: ignore
-    completion_tokens_amount = retrieval["usage"]["completion_tokens"]  # type: ignore
-
-    logger.info(
-        f"User {user_id} asked: {message.text}, we spent {prompt_tokens_amount} prompt tokens and {completion_tokens_amount} completion tokens"
-    )
-
-    # Add update to batch
-    batch_updates.append(
-        (
-            user_id,
-            datetime.now().isoformat(),
-            prompt_tokens_amount,
-            completion_tokens_amount,
-        )
-    )
-    if len(batch_updates) >= int(batch_size):
-        logger.info(f"Updating stats for {len(batch_updates)} requests")
-        update_stats()
-
-
-@dp.message_handler()
-async def handle_password(message: types.Message):
-    global allowed_users, stats  # Add stats here to refer to the global variable
-    user_id = str(message.from_user.id)
-    password = message.text
-
-    # Check if the user is already authorized
-    if user_id in allowed_users.index:
-        await message.answer(
-            "You are already authorized. Please use any of right first symbols."
-        )
-    else:
-        if password == bot_password:
-            # Add user to allowed users
-            allowed_users.loc[user_id] = [datetime.now().isoformat()]  # type: ignore
-            allowed_users.to_csv(allowed_users_file)
-
-            # Add new user to stats
-            stats.loc[user_id] = [0, None, 0, 0]  # type: ignore
-            stats.to_csv(stats_file)
-
-            await message.answer("Access granted. You can now use the bot.")
-            logger.info(f"User {user_id} was granted access with password: {password}")
+    async def _handle(self, message):
+        uid = str(message.from_user.id)
+        now = datetime.now(UTC).isoformat()
+        if uid not in self.allowed:
+            if hmac.compare_digest(message.text.encode(), self.password.encode()):
+                self.allowed[uid] = {"user_id": uid, "datetime_added": now}
+                write_csv(
+                    self.directory / "allowed_users.csv",
+                    self.allowed,
+                    ["user_id", "datetime_added"],
+                )
+                await message.answer("Access granted. You can now use the bot.")
+            else:
+                await message.answer("Invalid password. Access denied.")
+            return
+        if message.text.startswith(self.first):
+            history = [{"role": "system", "content": "Give short and useful answers."}]
+            prompt = message.text[len(self.first) :]
+        elif message.text.startswith(self.continue_symbol):
+            history = list(
+                self.history.get(
+                    uid,
+                    [{"role": "system", "content": "Give short and useful answers."}],
+                )
+            )
+            prompt = message.text[len(self.continue_symbol) :]
         else:
-            await message.answer("Invalid password. Access denied.")
-            logger.info(f"User {user_id} entered an invalid password: {password}")
+            await message.answer("Please start your message with a special symbol")
+            return
+        if not prompt.strip():
+            await message.answer("Please include a prompt after the symbol.")
+            return
+        history.append({"role": "user", "content": prompt})
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model, messages=history
+            )
+        except OpenAIError:
+            # Exceptions can contain request content; do not log them.
+            logger.warning("Model request failed")
+            await message.answer("The model request failed. Please try again later.")
+            return
+        answer = response.choices[0].message.content
+        if not answer:
+            await message.answer("The model returned no text.")
+            return
+        history.append({"role": "assistant", "content": answer})
+        self.history[uid] = history
+        temporary = self.directory / "conversation_history.tmp"
+        temporary.write_text(
+            json.dumps(self.history, ensure_ascii=False), encoding="utf-8"
+        )
+        temporary.replace(self.directory / "conversation_history.json")
+        row = self.stats.setdefault(
+            uid,
+            {
+                "user_id": uid,
+                "message_count": 0,
+                "last_message_datetime": "",
+                "prompt_tokens_amount": 0,
+                "completion_tokens_amount": 0,
+            },
+        )
+        row["message_count"] = int(row["message_count"]) + 1
+        row["last_message_datetime"] = now
+        for field, attribute in [
+            ("prompt_tokens_amount", "prompt_tokens"),
+            ("completion_tokens_amount", "completion_tokens"),
+        ]:
+            row[field] = int(row[field]) + (getattr(response.usage, attribute, 0) or 0)
+        write_csv(
+            self.directory / "stats.csv",
+            self.stats,
+            [
+                "user_id",
+                "message_count",
+                "last_message_datetime",
+                "prompt_tokens_amount",
+                "completion_tokens_amount",
+            ],
+        )
+        logger.info("Model request completed")
+        for offset in range(0, len(answer), 4000):
+            await message.answer(answer[offset : offset + 4000])
 
 
-def update_stats():
-    global batch_updates, stats  # Add stats here to refer to the global variable
-    for (
-        user_id,
-        timestamp,
-        prompt_tokens_amount,
-        completion_tokens_amount,
-    ) in batch_updates:
-        if user_id in stats.index:
-            stats.at[user_id, "message_count"] += 1
-            stats.at[user_id, "last_message_datetime"] = timestamp
-            stats.at[user_id, "prompt_tokens_amount"] += prompt_tokens_amount
-            stats.at[user_id, "completion_tokens_amount"] += completion_tokens_amount
-        else:
-            # Add new user to stats if not exist
-            stats.loc[user_id] = [
-                1,
-                timestamp,
-                prompt_tokens_amount,
-                completion_tokens_amount,
-            ]
-    stats.to_csv(stats_file)
-    batch_updates = []
+async def main():
+    load_dotenv()
+    logging.basicConfig(level=logging.WARNING)
+    async with AsyncOpenAI(
+        api_key=os.environ["OPENAI_API_KEY"], timeout=60, max_retries=2
+    ) as client:
+        helper = Helper(
+            client,
+            os.environ["BOT_PASSWORD"],
+            os.environ["FIRST_SYMBOL"],
+            os.environ["CONTINUE_SYMBOL"],
+            os.getenv("DATA_DIR", "."),
+            os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+        )
+        bot = Bot(token=os.environ["TELEGRAM_BOT_TOKEN"])
+        dp = Dispatcher()
+        dp.message.register(helper.handle)
+        await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    from aiogram import executor
-
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(main())

@@ -1,13 +1,17 @@
-import math
 import plotly.graph_objects as go
 import streamlit as st
+from probability import cumulative, fraction, trials_for_95
 
 
 def main():
     def plot_cumulative_success_prob(prob_success, max_trials):
         # Grab your lucky socks and let's plot some success probabilities!
-        x_data = list(range(1, max_trials + 1))
-        y_data = [1 - (1 - prob_success) ** n for n in x_data]
+        x_data = sorted(
+            set(
+                [1, max_trials] + [1 + i * (max_trials - 1) // 999 for i in range(1000)]
+            )
+        )
+        y_data = [cumulative(prob_success, n) for n in x_data]
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(x=x_data, y=y_data, mode="lines+markers", name="Success Curve"),
@@ -18,50 +22,46 @@ def main():
             xaxis_title="Number of Tries",
             yaxis_title="Chance of At Least One Win",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         st.write("Keep on trying, and the odds will get better!")
 
     def display_results(prob_success, num_trials, cumulative_prob):
         # Who doesn't love a good success story? Here are your stats!
         half_trials = num_trials // 2  # Taking a peek halfway through
-        cumulative_prob_half = 1 - (1 - prob_success) ** half_trials
+        cumulative_prob_half = cumulative(prob_success, half_trials)
 
         # When will you hit that sweet 95% success rate? Let's find out!
-        num_trials_95 = math.ceil(math.log(1 - 0.95) / math.log(1 - prob_success))
+        num_trials_95 = trials_for_95(prob_success)
 
         st.markdown(
-            """
+            f"""
             ### Your Probability Breakdown 🎉
 
-            - **Your starting win rate per try**: `{:.2f}%`
-            - **Number of tries**: `{}`
-            - **Tries needed for a 95% win chance (almost a sure thing!)**: `{}`
+            - **Your starting win rate per try**: `{prob_success * 100:.2f}%`
+            - **Number of tries**: `{num_trials}`
+            - **Tries needed for a 95% win chance (almost a sure thing!)**: `{num_trials_95}`
 
-            """.format(
-                prob_success * 100, num_trials, num_trials_95
-            )
+            """
         )
 
         st.markdown("### Key Stats")
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric(
-                label="Starting Win Rate", value="{:.2f}%".format(prob_success * 100)
-            )
+            st.metric(label="Starting Win Rate", value=f"{prob_success * 100:.2f}%")
         with col2:
             st.metric(
-                label="After {} Tries".format(half_trials),
-                value="{:.2f}%".format(cumulative_prob_half * 100),
+                label=f"After {half_trials} Tries",
+                value=f"{cumulative_prob_half * 100:.2f}%",
             )
         with col3:
             st.metric(
-                label="After {} Tries".format(num_trials),
-                value="{:.2f}%".format(cumulative_prob * 100),
+                label=f"After {num_trials} Tries",
+                value=f"{cumulative_prob * 100:.2f}%",
             )
 
     def calculate_results(prob_success, num_trials):
         # Crunching the numbers to see how your persistence pays off!
-        cumulative_prob = 1 - (1 - prob_success) ** num_trials
+        cumulative_prob = cumulative(prob_success, num_trials)
         return cumulative_prob
 
     st.title("When Will Success Knock on My Door? 🚪🤔")
@@ -76,6 +76,10 @@ def main():
 
         This little app is here to show you how, even with low odds on a single try, your overall chances of success climb with every new attempt. So even when it feels like the universe is playing hard to get, remember that **a bit of grit and a willingness to keep trying can seriously boost your odds of winning**.
         """
+    )
+
+    st.info(
+        "Assumes independent trials with a constant success probability; this is not a prediction of personal outcomes."
     )
 
     # How do you want to roll the dice today? Pick your input style!
@@ -102,7 +106,11 @@ def main():
     else:
         numerator = st.number_input("Number of Wins", min_value=0, value=1)
         denominator = st.number_input("Out of How Many Tries?", min_value=1, value=7)
-        prob_success = numerator / denominator if denominator != 0 else 0
+        try:
+            prob_success = fraction(numerator, denominator)
+        except ValueError as exc:
+            st.error(str(exc))
+            st.stop()
         num_trials = st.number_input(
             "Total Tries You're Going For", min_value=1, max_value=1000000, value=10
         )

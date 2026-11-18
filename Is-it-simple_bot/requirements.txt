@@ -1,2 +1,2 @@
-aiogram
-translators
+aiogram==3.32.0
+deep-translator==1.11.4

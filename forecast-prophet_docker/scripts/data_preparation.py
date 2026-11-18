@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -9,7 +10,6 @@ def prepare_data(file_path):
     Groups sales data by day if more detailed sales data is provided.
     """
     try:
-
         df = pd.read_csv(file_path, usecols=[0, 1])
 
         df.columns = ["ds", "y"]
@@ -17,10 +17,18 @@ def prepare_data(file_path):
         print("size of original data: ", df.shape)
 
         df["ds"] = pd.to_datetime(df["ds"])
-        df["ds"] = df["ds"].dt.date
+        if df["ds"].dt.tz is not None:
+            raise ValueError("Dates must be timezone-naive")
+        df["ds"] = df["ds"].dt.normalize()
+        df["y"] = pd.to_numeric(df["y"], errors="raise")
+        if df.isna().any().any() or not np.isfinite(df["y"]).all():
+            raise ValueError("Dates and sales must be complete and finite")
 
         # group sales datetime data by day
         df = df.groupby("ds").sum().reset_index()
+
+        if len(df) < 2:
+            raise ValueError("At least two distinct days are required")
 
         print("size of aggregated data: ", df.shape)
 

@@ -49,3 +49,17 @@ Upon successful execution, the project generates four key outputs in the `/resul
 
 This project simplifies the process of sales forecasting in e-commerce, making advanced time series analysis accessible to non-experts. It's a practical tool for businesses looking to gain insights into future sales trends without delving into the complexities of statistical modeling. The Dockerized setup ensures a smooth and consistent user experience across different platforms.
 
+
+
+## Compatibility update (2026-11-18)
+
+Python 3.14; Prophet 1.5.0, pandas 3.1.1, NumPy 2.5.5, Matplotlib 3.11.2, python-dotenv 1.2.4. Matplotlib replaces Plotly/Kaleido for the two PNGs, eliminating the browser runtime. CSV names/schema are preserved. Dates must be timezone-naive and sales finite; at least two distinct days and a positive integer horizon are required. Daily aggregation does not fill missing dates. Training uses seed 42. Synthetic repeatability does not establish forecast accuracy; no rolling backtest or historical model serialization migration is supplied. Upstream Prophet emits pandas deprecation warnings; current pinned execution passes.
+
+Offline regression checks from this project directory, after installing requirements:
+
+```sh
+python -m unittest discover -s tests -v
+python -m pip check
+```
+
+See [maintenance record](../maintenance-2026.md) for container validation and limitations.

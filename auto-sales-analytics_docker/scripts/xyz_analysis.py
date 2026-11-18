@@ -1,6 +1,6 @@
-import pandas as pd
 import numpy as np
-from scipy.stats.mstats import variation
+
+from ._common import load_sales
 
 
 def perform_xyz(
@@ -10,22 +10,28 @@ def perform_xyz(
     units_col="quantity",
 ):
     # Load the data
-    df = pd.read_csv(csv_path)
-
-    # Calculate sales for each product
-    df["sales"] = df[price_col] * df[units_col]
+    df = load_sales(csv_path, product_col, price_col, units_col)
 
     # Calculate the Coefficient of Variation (CV) for each product
     product_variation = (
-        df.groupby(product_col)["sales"].apply(lambda x: variation(x)).reset_index()
+        df.groupby(product_col)["sales"]
+        .apply(
+            lambda x: (
+                (x / x.max()).std(ddof=0) / (x / x.max()).mean()
+                if x.max() > 0
+                else float("nan")
+            )
+        )
+        .reset_index()
     )
     product_variation.columns = [product_col, "cv"]
 
     # Sort by cv in ascending order
-    product_variation.sort_values(by="cv", ascending=True, inplace=True)
+    product_variation = product_variation.sort_values(by="cv", ascending=True)
 
     # Define thresholds (in this case, we divide into three equal parts)
-    thresholds = np.percentile(product_variation["cv"], [33, 66])
+    finite_cv = product_variation["cv"].dropna()
+    thresholds = np.percentile(finite_cv, [33, 66]) if len(finite_cv) else [0, 0]
 
     # Assign XYZ categories
     product_variation["category"] = "Z"
@@ -38,12 +44,11 @@ def perform_xyz(
         .agg({product_col: "count", "cv": "mean"})
         .reset_index()
     )
-    xyz_result.rename(
+    xyz_result = xyz_result.rename(
         columns={
             product_col: "number_of_products",
             "cv": "average_cv",
         },
-        inplace=True,
     )
 
     result = {"XYZ stats": xyz_result, "XYZ classification": product_variation}

@@ -18,9 +18,9 @@ See the [portfolio overview](portfolio-overview.md) for exact inputs, outputs, c
 
 | Project | Input → output / purpose | Limits and proposed check |
 | --- | --- | --- |
-| [Probability visualizer](probability-endurance_streamlit/) | Probability and trial count → curve for at least one success, `1 - (1-p)^n`. | Educational prototype assuming independent trials and constant probability. Boundary inputs need fixes. Check formula and comprehension, not real-world success predictions. |
+| [Probability visualizer](probability-endurance_streamlit/) | Probability and trial count → curve for at least one success, `1 - (1-p)^n`. | Educational prototype assuming independent trials and constant probability. Boundary inputs are validated; offline UI tests cover zero, one and invalid fractions. Check formula and comprehension, not real-world success predictions. |
 | [Translation bot](Is-it-simple_bot/) | Telegram text → Russian → Turkish → Russian translation. | Limited external-service experiment. Round-trip similarity is not translation quality; use human review of representative phrases. |
-| [GPT helper bot](gpt_helper_bot/) | Telegram prompts → API responses, conversation history and usage records. | Limited integration experiment using a legacy API interface. Passwords and prompts are logged. Review data handling; evaluate task completion and cost on a fixed prompt set. |
+| [GPT helper bot](gpt_helper_bot/) | Telegram prompts → API responses, conversation history and usage records. | Limited integration experiment with async API calls and no password/prompt logging. Local history still contains sensitive text; review data retention; evaluate task completion and cost on a fixed prompt set. |
 | [Airflow jokes pipeline](jokes-aside_airflow/) | Public joke API → PostgreSQL → email task. | Educational orchestration prototype requiring database/email configuration. Check retries, duplicates and delivery in a controlled environment. |
 
 ## Start here

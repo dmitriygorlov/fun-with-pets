@@ -31,3 +31,17 @@ Make "one command" solution for some easy analysis on your own data without NDA 
 
 ## Conclusion
 This project provides a simple example of how to make some easy analysis on your own data without NDA break. It can be used as a template for more complex analysis.
+
+
+## Compatibility update (2026-11-18)
+
+Python 3.14; pandas 3.1.1, NumPy 2.5.5, openpyxl 3.1.5. SciPy is no longer required: population CV uses pandas `std(ddof=0)`. Input requires complete, finite, non-negative prices/quantities and product IDs. ABC rejects zero total revenue; its existing cumulative boundary convention is preserved (a dominant single product can be C). XYZ classifies zero-mean products as Z with undefined CV, excluding them from percentile thresholds. This is transaction variability, not period demand. Output directories are created automatically.
+
+Offline regression checks from this project directory, after installing requirements:
+
+```sh
+python -m unittest discover -s tests -v
+python -m pip check
+```
+
+See [maintenance record](../maintenance-2026.md) for container validation and limitations.

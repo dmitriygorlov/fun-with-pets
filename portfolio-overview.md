@@ -85,9 +85,9 @@ docker build -t probability-endurance .
 docker run --rm -p 8501:8501 probability-endurance
 ```
 
-The Dockerfile exposes port 8501. Hosted demo availability was not verified. Use `0 < p < 1`: the current 95%-threshold calculation fails at 0 and 1; fractional input can also exceed 1.
+The Dockerfile exposes port 8501. Hosted demo availability was not verified. Inputs at `p=0` and `p=1` now work, invalid fractions are rejected, and plotting is capped at 1,000 points. Offline Streamlit AppTest covers these inputs.
 
-The [translation](Is-it-simple_bot/README.md), [GPT bot](gpt_helper_bot/README.md) and [Airflow](jokes-aside_airflow/README.md) instructions are integration references, not verified quick starts. They require external services and credentials; no messages or emails were sent during review. The translation folder's exact case is `Is-it-simple_bot`. The GPT bot logs passwords and prompts and uses a legacy API call; it is not a secure production assistant. Airflow requires the `jokes_conn` database connection and email configuration.
+The [translation](Is-it-simple_bot/README.md), [GPT bot](gpt_helper_bot/README.md) and [Airflow](jokes-aside_airflow/README.md) instructions are integration references, not verified quick starts. They require external services and credentials; no messages or emails were sent during review. The translation folder's exact case is `Is-it-simple_bot`. The GPT bot now uses an async client and excludes passwords/prompts from logs. Its CSV/JSON history is still sensitive local data; this is not a production security assessment. Airflow requires the `jokes_conn` database connection and email configuration.
 
 ## Verification record
 
@@ -101,3 +101,6 @@ Initial review baseline: `7fb0f48322976d8189b1b009e982b7b8d84b53c8`. Integration
 - Compose startup, sales/forecast container execution, external services, hosted demos and business impact were not verified. The training container and modern prediction-only dependency profiles are separate; see the [module verification record](ecom-recs-for-email_docker/README.md#dependency-profiles-and-container-verification).
 
 A **local example** exercises analytical functions on supplied input; a **learning prototype** implements a workflow without outcome validation; a **limited experiment** additionally has concrete integration or input-handling constraints. None implies production readiness.
+
+
+The [2026 maintenance record](maintenance-2026.md) records dependency changes, isolated regression commands and remaining integration limits.
